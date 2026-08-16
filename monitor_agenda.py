@@ -36,8 +36,8 @@ def save_cache(cache):
 
 
 def fetch_meeting_links():
-    """Scrapes AgendaCenter focusing on Common Council and board minutes/agendas."""
-    headers = {"User-Agent": "Mozilla/5.0"}
+    """Scrapes AgendaCenter focusing on PDF document links."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     print(f"Fetching {AGENDA_CENTER_URL}...")
     response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
     response.raise_for_status()
@@ -101,8 +101,9 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     - Plain-language summary of what this means for local residents and taxpayers.
     """
 
+    # Using gemini-1.5-flash as the primary stable model
     response = client.models.generate_content(
-        model = "gemini-1.5-flash",
+        model="gemini-1.5-flash",
         contents=[uploaded_file, prompt],
         config=types.GenerateContentConfig(
             temperature=0.2,
@@ -121,7 +122,6 @@ def main():
     cache = load_cache()
     docs = fetch_meeting_links()
 
-    # Process up to 5 documents per run
     processed_count = 0
     max_per_run = 5
 
@@ -155,6 +155,7 @@ def main():
 
                 print(f"Saved briefing to {output_filename}")
                 
+                # Update cache only AFTER successful file write
                 cache[clean_id] = {
                     "url": doc_url,
                     "title": item["title"],
@@ -164,7 +165,7 @@ def main():
                 save_cache(cache)
                 processed_count += 1
 
-                # Clean up local PDF file to save disk space
+                # Clean up local PDF
                 if os.path.exists(pdf_path):
                     os.remove(pdf_path)
 
