@@ -21,29 +21,31 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 def get_available_model():
-  try:
-    models = list(client.models.list())
-    supported = [
-        m.name
-        for m in models
-        if (hasattr(m, "supported_actions") and "generateContent" in m.supported_actions)
-        or hasattr(m, "name")
-    ]
-    for candidate in [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-flash",
-    ]:
-      for m in supported:
-        if candidate in m:
-          model_name = m.replace("models/", "")
-          print(f"Selected active Gemini model: {model_name}")
-          return model_name
-    if supported:
-      return supported[0].replace("models/", "")
-  except Exception as e:
-    print(f"Model lookup fallback: {e}")
-  return "gemini-2.5-flash"
+    """Dynamically queries the API to select the best active model."""
+    try:
+        models = list(client.models.list())
+        supported = [
+            m.name
+            for m in models
+            if (hasattr(m, "supported_actions") and "generateContent" in m.supported_actions)
+            or hasattr(m, "name")
+        ]
+        # Priority order for active, high-quota Gemini models
+        for candidate in [
+            "gemini-3.7-flash",
+            "gemini-2.0-flash",
+            "gemini-flash",
+        ]:
+            for m in supported:
+                if candidate in m:
+                    model_name = m.replace("models/", "")
+                    print(f"Selected active Gemini model: {model_name}")
+                    return model_name
+        if supported:
+            return supported[0].replace("models/", "")
+    except Exception as e:
+        print(f"Model lookup fallback: {e}")
+    return "gemini-3.7-flash"
 
 
 ACTIVE_MODEL = get_available_model()
