@@ -13,6 +13,7 @@ CACHE_FILE = "processed_meetings.json"
 OUTPUT_DIR = "briefings"
 DOWNLOAD_DIR = "downloads"
 
+# Initialize Google GenAI client
 client = genai.Client()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -35,8 +36,9 @@ def save_cache(cache):
 
 
 def fetch_meeting_links():
-    """Scrapes AgendaCenter focusing on Common Council and key board minutes/agendas."""
+    """Scrapes AgendaCenter focusing on Common Council and board minutes/agendas."""
     headers = {"User-Agent": "Mozilla/5.0"}
+    print(f"Fetching {AGENDA_CENTER_URL}...")
     response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
     response.raise_for_status()
 
@@ -52,14 +54,13 @@ def fetch_meeting_links():
             parent_row = link.find_parent("tr") or link.find_parent("div")
             row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-            # Prioritize Minutes or Agendas with dates
             found_docs.append({
                 "url": full_url,
                 "title": text or "Document",
                 "context": row_text
             })
 
-    print(f"Found {len(found_docs)} total document links.")
+    print(f"Total matching document links identified: {len(found_docs)}")
     return found_docs
 
 
@@ -120,7 +121,7 @@ def main():
     cache = load_cache()
     docs = fetch_meeting_links()
 
-    # Process up to 5 documents per run to remain within runtime limits
+    # Process up to 5 documents per run
     processed_count = 0
     max_per_run = 5
 
@@ -132,7 +133,6 @@ def main():
         doc_url = item["url"]
         clean_id = doc_url.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
 
-        # Skip already processed documents
         if clean_id in cache:
             continue
 
@@ -164,7 +164,7 @@ def main():
                 save_cache(cache)
                 processed_count += 1
 
-                # Clean up local PDF after generation to keep disk usage light
+                # Clean up local PDF file to save disk space
                 if os.path.exists(pdf_path):
                     os.remove(pdf_path)
 
