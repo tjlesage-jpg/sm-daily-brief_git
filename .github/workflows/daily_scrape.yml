@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -35,12 +35,12 @@ jobs:
 
       - name: Commit and Push New Briefings
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add briefings/ processed_meetings.json
           if ! git diff --staged --quiet; then
             git commit -m "Auto-update: new meeting briefings"
-            git push origin main
+            git push origin HEAD:${{ github.ref_name }}
           else
             echo "No new files to commit."
           fi
