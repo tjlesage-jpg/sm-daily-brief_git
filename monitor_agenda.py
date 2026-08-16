@@ -14,43 +14,18 @@ CACHE_FILE = "processed_meetings.json"
 OUTPUT_DIR = "briefings"
 DOWNLOAD_DIR = "downloads"
 
+# Candidate models in order of preference
+FALLBACK_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-flash",
+    "gemini-3.7-flash",
+]
+
 client = genai.Client()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-
-def get_available_model():
-  """Dynamically selects the active Gemini flash model."""
-  try:
-    models = list(client.models.list())
-    supported = [
-        m.name
-        for m in models
-        if (
-            hasattr(m, "supported_actions")
-            and "generateContent" in m.supported_actions
-        )
-        or hasattr(m, "name")
-    ]
-    for candidate in [
-        "gemini-3.7-flash",
-        "gemini-2.0-flash",
-        "gemini-flash",
-    ]:
-      for m in supported:
-        if candidate in m:
-          model_name = m.replace("models/", "")
-          print(f"Selected active Gemini model: {model_name}")
-          return model_name
-    if supported:
-      return supported[0].replace("models/", "")
-  except Exception as e:
-    print(f"Model lookup fallback: {e}")
-  return "gemini-3.7-flash"
-
-
-ACTIVE_MODEL = get_available_model()
 
 
 def load_cache():
@@ -143,7 +118,7 @@ def is_pdf(content):
 
 
 def summarize_pdf_with_gemini(pdf_path, meeting_context):
-  """Uploads PDF to Gemini and produces a structured briefing with Jekyll frontmatter."""
+  """Uploads PDF and tries models in fallback sequence until successful."""
   print(f"Uploading {pdf_path} to Gemini...")
   uploaded_file = client.files.upload(file=pdf_path)
 
@@ -186,32 +161,47 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     - Plain-language summary of what this means for local residents and taxpayers.
     """
 
-  response = client.models.generate_content(
-      model=ACTIVE_MODEL,
-      contents=[uploaded_file, prompt],
-      config=types.GenerateContentConfig(
-          temperature=0.2,
-      ),
-  )
+  last_error = None
+  response_text = None
+
+  for model_name in FALLBACK_MODELS:
+    try:
+      print(f"Attempting generation with model: {model_name}...")
+      response = client.models.generate_content(
+          model=model_name,
+          contents=[uploaded_file, prompt],
+          config=types.GenerateContentConfig(
+              temperature=0.2,
+          ),
+      )
+      response_text = response.text
+      print(f"Successfully generated summary with {model_name}.")
+      break
+    except Exception as e:
+      print(f"Model {model_name} failed ({e}). Trying next fallback...")
+      last_error = e
+      time.sleep(3)
 
   try:
     client.files.delete(name=uploaded_file.name)
   except Exception:
     pass
 
-  return response.text
+  if response_text:
+    return response_text
+  raise last_error
 
 
 def main():
   cache = load_cache()
-  # Upfront gatekeeper: filters links before loop starts
   new_docs = fetch_new_meeting_links(cache)
 
   if not new_docs:
     print("All Common Council meetings are up to date. Nothing to do.")
     return
 
-  max_per_run = 10
+  # Process in batches of 5 to stay safely within free-tier burst limits
+  max_per_run = 5
   processed_count = 0
 
   for item in new_docs[:max_per_run]:
@@ -242,7 +232,6 @@ def main():
 
         print(f"Saved briefing to {output_filename}")
 
-        # Update cache after successful briefing write
         cache[clean_id] = {
             "url": doc_url,
             "title": item["title"],
@@ -256,12 +245,13 @@ def main():
         if os.path.exists(pdf_path):
           os.remove(pdf_path)
 
-        # 12-second sleep to stay comfortably under the 5 RPM rate limit
-        time.sleep(12)
       else:
         print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
       print(f"Error processing {doc_url}: {e}")
+
+    # Mandatory cooldown between attempts to stay well below rate limits
+    time.sleep(10)
 
   print(
       f"\nBatch complete. Successfully summarized {processed_count} new Common"
