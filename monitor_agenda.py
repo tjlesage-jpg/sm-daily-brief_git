@@ -118,8 +118,13 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
 
     Context / Header: {meeting_context}
 
-    Format the output in clean Markdown with the following structure:
-    # {meeting_context.split('—')[0].strip() if '—' in meeting_context else 'South Milwaukee Municipal Briefing'}
+    Your output MUST start with YAML frontmatter at the very top, exactly like this:
+    ---
+    title: "{meeting_context.split('—')[0].strip() if '—' in meeting_context else 'Meeting Briefing'}"
+    layout: default
+    ---
+
+      # {meeting_context.split('—')[0].strip() if '—' in meeting_context else 'South Milwaukee Municipal Briefing'}
 
     **Document:** {meeting_context}
 
