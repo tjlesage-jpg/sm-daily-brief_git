@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
+from pypdf import PdfReader
 import requests
 
 # Configuration
@@ -14,18 +15,53 @@ CACHE_FILE = "processed_meetings.json"
 OUTPUT_DIR = "briefings"
 DOWNLOAD_DIR = "downloads"
 
-# Candidate models in order of preference
-FALLBACK_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-flash",
-    "gemini-3.7-flash",
-]
-
 client = genai.Client()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+
+def get_active_models():
+  """Discovers all currently supported generateContent models for this API key."""
+  valid_models = []
+  try:
+    models = list(client.models.list())
+    for m in models:
+      name = m.name.replace("models/", "")
+      # Look for models capable of text generation
+      if hasattr(m, "supported_actions") and (
+          "generateContent" in m.supported_actions or not m.supported_actions
+      ):
+        valid_models.append(name)
+      elif not hasattr(m, "supported_actions"):
+        valid_models.append(name)
+
+    # Sort so flash/fast models are attempted first
+    preferred_order = [
+        "gemini-3.7-flash",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+    ]
+    sorted_models = []
+    for pref in preferred_order:
+      for vm in valid_models:
+        if pref in vm and vm not in sorted_models:
+          sorted_models.append(vm)
+
+    for vm in valid_models:
+      if vm not in sorted_models:
+        sorted_models.append(vm)
+
+    print(f"Discovered {len(sorted_models)} active model(s): {sorted_models}")
+    return sorted_models if sorted_models else ["gemini-3.7-flash"]
+  except Exception as e:
+    print(f"Error querying model list: {e}")
+    return ["gemini-3.7-flash"]
+
+
+AVAILABLE_MODELS = get_active_models()
 
 
 def load_cache():
@@ -44,7 +80,6 @@ def save_cache(cache):
 
 
 def get_clean_id(href, doc_type):
-  """Generates a stable unique ID string from the CivicPlus URL."""
   raw_id = (
       href.split("ViewFile/")[-1]
       .replace("/", "_")
@@ -55,9 +90,9 @@ def get_clean_id(href, doc_type):
 
 
 def fetch_new_meeting_links(cache):
-  """Scrapes AgendaCenter and IMMEDIATELY filters out already processed files."""
+  """Scrapes AgendaCenter and extracts only new Common Council documents."""
   headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-  print(f"Checking {AGENDA_CENTER_URL} for new Common Council documents...")
+  print(f"Checking {AGENDA_CENTER_URL} for Common Council documents...")
   response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
   response.raise_for_status()
 
@@ -73,12 +108,10 @@ def fetch_new_meeting_links(cache):
       parent_row = link.find_parent("tr") or link.find_parent("div")
       row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-      # Filter exclusively for Common Council
-      is_common_council = (
+      if not (
           "common council" in row_text.lower()
           or "common council" in text.lower()
-      )
-      if not is_common_council:
+      ):
         continue
 
       total_council_docs += 1
@@ -89,7 +122,7 @@ def fetch_new_meeting_links(cache):
       )
       clean_id = get_clean_id(href, doc_type)
 
-      # Fast Pre-Filter: check if already in cache and markdown file exists
+      # Skip if already recorded and markdown file exists
       expected_md = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
       if clean_id in cache and os.path.exists(expected_md):
         continue
@@ -107,21 +140,28 @@ def fetch_new_meeting_links(cache):
       f"Identified {total_council_docs} total Common Council documents. Found"
       f" {len(new_docs)} new/unprocessed item(s)."
   )
-
   # Prioritize Minutes over Agendas
   new_docs.sort(key=lambda x: 0 if x["doc_type"] == "Minutes" else 1)
   return new_docs
 
 
-def is_pdf(content):
-  return content.startswith(b"%PDF")
+def extract_text_from_pdf(pdf_path):
+  """Extracts clean text directly from PDF without uploading to Files API."""
+  try:
+    reader = PdfReader(pdf_path)
+    text = ""
+    for page in reader.pages:
+      page_text = page.extract_text()
+      if page_text:
+        text += page_text + "\n"
+    return text.strip()
+  except Exception as e:
+    print(f"Local PDF text extraction failed for {pdf_path}: {e}")
+    return ""
 
 
-def summarize_pdf_with_gemini(pdf_path, meeting_context):
-  """Uploads PDF and tries models in fallback sequence until successful."""
-  print(f"Uploading {pdf_path} to Gemini...")
-  uploaded_file = client.files.upload(file=pdf_path)
-
+def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
+  """Summarizes meeting content with dynamic model fallback and rate limit handling."""
   headline = (
       meeting_context.split("—")[0].strip()
       if "—" in meeting_context
@@ -161,35 +201,53 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     - Plain-language summary of what this means for local residents and taxpayers.
     """
 
-  last_error = None
-  response_text = None
+  # Prepare payload: use local text if available, fallback to file upload
+  uploaded_file = None
+  if text_content and len(text_content) > 100:
+    contents = [text_content, prompt]
+  else:
+    print(
+        f"PDF does not contain plain text; uploading {pdf_path} to Gemini..."
+    )
+    uploaded_file = client.files.upload(file=pdf_path)
+    contents = [uploaded_file, prompt]
 
-  for model_name in FALLBACK_MODELS:
+  summary_result = None
+  quota_exhausted_all = True
+
+  for model_name in AVAILABLE_MODELS:
     try:
-      print(f"Attempting generation with model: {model_name}...")
+      print(f"Calling Gemini model: {model_name}...")
       response = client.models.generate_content(
           model=model_name,
-          contents=[uploaded_file, prompt],
+          contents=contents,
           config=types.GenerateContentConfig(
               temperature=0.2,
           ),
       )
-      response_text = response.text
+      summary_result = response.text
+      quota_exhausted_all = False
       print(f"Successfully generated summary with {model_name}.")
       break
     except Exception as e:
-      print(f"Model {model_name} failed ({e}). Trying next fallback...")
-      last_error = e
-      time.sleep(3)
+      err_str = str(e)
+      if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+        print(f"Model {model_name} hit daily/rate quota. Trying next model...")
+      elif "503" in err_str or "UNAVAILABLE" in err_str:
+        print(
+            f"Model {model_name} temporarily high demand. Trying next model..."
+        )
+      else:
+        print(f"Model {model_name} error: {e}")
+      time.sleep(2)
 
-  try:
-    client.files.delete(name=uploaded_file.name)
-  except Exception:
-    pass
+  if uploaded_file:
+    try:
+      client.files.delete(name=uploaded_file.name)
+    except Exception:
+      pass
 
-  if response_text:
-    return response_text
-  raise last_error
+  return summary_result, quota_exhausted_all
 
 
 def main():
@@ -200,7 +258,7 @@ def main():
     print("All Common Council meetings are up to date. Nothing to do.")
     return
 
-  # Process in batches of 5 to stay safely within free-tier burst limits
+  # Process up to 5 documents per daily run to stay well within free tier limits
   max_per_run = 5
   processed_count = 0
 
@@ -217,45 +275,60 @@ def main():
     try:
       res = requests.get(doc_url, headers=headers, timeout=45)
       if res.status_code == 200 and (
-          is_pdf(res.content)
+          res.content.startswith(b"%PDF")
           or "pdf" in res.headers.get("Content-Type", "").lower()
       ):
         pdf_path = os.path.join(DOWNLOAD_DIR, f"{clean_id}.pdf")
         with open(pdf_path, "wb") as f:
           f.write(res.content)
 
-        summary_md = summarize_pdf_with_gemini(pdf_path, item["context"])
+        text_content = extract_text_from_pdf(pdf_path)
+        summary_md, quota_exhausted = summarize_content_with_gemini(
+            text_content, pdf_path, item["context"]
+        )
 
-        output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
-        with open(output_filename, "w", encoding="utf-8") as out:
-          out.write(summary_md)
+        if summary_md:
+          output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
+          with open(output_filename, "w", encoding="utf-8") as out:
+            out.write(summary_md)
 
-        print(f"Saved briefing to {output_filename}")
+          print(f"Saved briefing to {output_filename}")
 
-        cache[clean_id] = {
-            "url": doc_url,
-            "title": item["title"],
-            "doc_type": item["doc_type"],
-            "context": item["context"],
-            "output_file": output_filename,
-        }
-        save_cache(cache)
-        processed_count += 1
+          cache[clean_id] = {
+              "url": doc_url,
+              "title": item["title"],
+              "doc_type": item["doc_type"],
+              "context": item["context"],
+              "output_file": output_filename,
+          }
+          save_cache(cache)
+          processed_count += 1
 
         if os.path.exists(pdf_path):
           os.remove(pdf_path)
+
+        if quota_exhausted:
+          print(
+              "\nAll available models have exhausted their free-tier quota for"
+              " today."
+          )
+          print(
+              "Saved completed items. The remaining backlog will automatically"
+              " continue on the next scheduled run."
+          )
+          break
+
+        # Throttling to prevent burst-rate spikes
+        time.sleep(10)
 
       else:
         print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
       print(f"Error processing {doc_url}: {e}")
 
-    # Mandatory cooldown between attempts to stay well below rate limits
-    time.sleep(10)
-
   print(
-      f"\nBatch complete. Successfully summarized {processed_count} new Common"
-      " Council document(s)."
+      f"\nRun complete. Successfully generated {processed_count} new"
+      " briefing(s)."
   )
 
 
