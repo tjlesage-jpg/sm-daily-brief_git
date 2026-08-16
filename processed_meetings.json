@@ -1,1 +1,32 @@
-{}
+{
+  "Agenda__05192026-1057": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_05192026-1057",
+    "title": "Common Council Meeting Agenda (PDF) - 7:00 PM",
+    "context": "May 19, 2026 \u2014\u2009Posted May 15, 2026 3:57 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Agenda__05192026-1057.md"
+  },
+  "Minutes__05062026-1051": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_05062026-1051",
+    "title": "Document",
+    "context": "May 6, 2026 \u2014\u2009Posted May 5, 2026 8:23 AM Common Council Special Meeting Agenda (PDF) - 6:30 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes__05062026-1051.md"
+  },
+  "Minutes__04212026-1046": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_04212026-1046",
+    "title": "Document",
+    "context": "Apr 21, 2026 \u2014\u2009Amended Apr 20, 2026 3:39 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes__04212026-1046.md"
+  },
+  "Agenda__04062026-1039": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_04062026-1039",
+    "title": "Common Council Special Meeting Agenda (PDF) - 6:00 PM",
+    "context": "Apr 6, 2026 \u2014\u2009Posted Apr 3, 2026 2:43 PM Common Council Special Meeting Agenda (PDF) - 6:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Agenda__04062026-1039.md"
+  },
+  "Minutes__04062026-1039": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_04062026-1039",
+    "title": "Document",
+    "context": "Apr 6, 2026 \u2014\u2009Posted Apr 3, 2026 2:43 PM Common Council Special Meeting Agenda (PDF) - 6:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes__04062026-1039.md"
+  }
+}
