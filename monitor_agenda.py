@@ -13,7 +13,6 @@ CACHE_FILE = "processed_meetings.json"
 OUTPUT_DIR = "briefings"
 DOWNLOAD_DIR = "downloads"
 
-# Initialize Google GenAI client
 client = genai.Client()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -36,47 +35,40 @@ def save_cache(cache):
 
 
 def fetch_meeting_links():
-    """Scrapes AgendaCenter for minutes and agenda PDF links."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    print(f"Fetching {AGENDA_CENTER_URL}...")
+    """Scrapes AgendaCenter focusing on Common Council and key board minutes/agendas."""
+    headers = {"User-Agent": "Mozilla/5.0"}
     response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
     found_docs = []
 
-    # Search for all links containing 'ViewFile' or ending with '.pdf'
     for link in soup.find_all("a", href=True):
         href = link["href"]
         text = link.get_text(strip=True)
 
         if "viewfile" in href.lower() or href.lower().endswith(".pdf"):
             full_url = urljoin(BASE_URL, href)
-            
-            # Find surrounding row or category context
             parent_row = link.find_parent("tr") or link.find_parent("div")
             row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-            # Prefer Common Council items if context is present
+            # Prioritize Minutes or Agendas with dates
             found_docs.append({
                 "url": full_url,
                 "title": text or "Document",
                 "context": row_text
             })
 
-    print(f"Total matching document links identified: {len(found_docs)}")
+    print(f"Found {len(found_docs)} total document links.")
     return found_docs
 
 
-def is_pdf(response_bytes):
-    """Checks if the downloaded content starts with PDF header bytes."""
-    return response_bytes.startswith(b"%PDF")
+def is_pdf(content):
+    return content.startswith(b"%PDF")
 
 
 def summarize_pdf_with_gemini(pdf_path, meeting_context):
-    """Uploads PDF to Gemini and produces a markdown briefing."""
+    """Uploads PDF to Gemini and produces a structured briefing."""
     print(f"Uploading {pdf_path} to Gemini...")
     uploaded_file = client.files.upload(file=pdf_path)
 
@@ -84,16 +76,28 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     You are an objective, hyper-local civic reporter for South Milwaukee, WI.
     Analyze this municipal meeting document and write a clean, structured recap for residents.
 
-    Context: {meeting_context}
+    Context / Header: {meeting_context}
 
-    Format the output in Markdown with the following sections:
-    - **Headline & Date**
-    - **Key Decisions & Votes Passed** (List exact roll calls, ordinances, and dollar amounts if present)
-    - **Public Works & Infrastructure Updates**
-    - **Permits, Licenses & Local Businesses**
-    - **Citizen Impact / What Residents Should Know**
+    Format the output in clean Markdown with the following structure:
+    # {meeting_context.split('—')[0].strip() if '—' in meeting_context else 'South Milwaukee Municipal Briefing'}
 
-    Maintain a neutral, factual, and scannable tone. Do not include conversational introductory fluff.
+    **Document:** {meeting_context}
+
+    ### Executive Summary
+    Brief 2-3 sentence overview of the meeting's primary focus.
+
+    ### Key Decisions & Roll Call Votes
+    - List passed resolutions, ordinances, appointments, or approvals.
+    - Include specific roll call tallies (e.g. 7-0) and dollar amounts where present.
+
+    ### Infrastructure, Utilities & Public Works
+    - Highlight contracts, bids, road work, water/wastewater items.
+
+    ### Business, Licensing & Community
+    - Note licenses granted, events approved, or public hearings held.
+
+    ### Citizen Impact / Takeaways
+    - Plain-language summary of what this means for local residents and taxpayers.
     """
 
     response = client.models.generate_content(
@@ -104,7 +108,6 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
         )
     )
 
-    # Clean up uploaded file
     try:
         client.files.delete(name=uploaded_file.name)
     except Exception:
@@ -117,24 +120,23 @@ def main():
     cache = load_cache()
     docs = fetch_meeting_links()
 
-    # Process up to 5 newest unread items per run to stay well within rate/time limits
-    processed_this_run = 0
-    max_items_per_run = 5
+    # Process up to 5 documents per run to remain within runtime limits
+    processed_count = 0
+    max_per_run = 5
 
     for item in docs:
-        if processed_this_run >= max_items_per_run:
-            print(f"Reached batch limit of {max_items_per_run} files for this run.")
+        if processed_count >= max_per_run:
+            print(f"Reached batch limit of {max_per_run} files for this run.")
             break
 
         doc_url = item["url"]
-        
-        # Clean unique ID
         clean_id = doc_url.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
 
+        # Skip already processed documents
         if clean_id in cache:
             continue
 
-        print(f"\nDownloading: {item['title']} | Context: {item['context'][:80]}...")
+        print(f"\nProcessing [{processed_count + 1}/{max_per_run}]: {item['context'][:70]}...")
         headers = {"User-Agent": "Mozilla/5.0"}
         
         try:
@@ -144,13 +146,14 @@ def main():
                 with open(pdf_path, "wb") as f:
                     f.write(res.content)
 
+                # Generate summary
                 summary_md = summarize_pdf_with_gemini(pdf_path, item["context"])
                 
-                output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}_briefing.md")
+                output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
                 with open(output_filename, "w", encoding="utf-8") as out:
                     out.write(summary_md)
 
-                print(f"Successfully generated briefing: {output_filename}")
+                print(f"Saved briefing to {output_filename}")
                 
                 cache[clean_id] = {
                     "url": doc_url,
@@ -159,13 +162,18 @@ def main():
                     "output_file": output_filename
                 }
                 save_cache(cache)
-                processed_this_run += 1
+                processed_count += 1
+
+                # Clean up local PDF after generation to keep disk usage light
+                if os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+
             else:
-                print(f"Skipping: Content at {doc_url} is not a valid PDF (Status: {res.status_code})")
+                print(f"Skipping non-PDF link: {doc_url}")
         except Exception as e:
             print(f"Error processing {doc_url}: {e}")
 
-    print(f"\nRun complete. Processed {processed_this_run} new document(s).")
+    print(f"\nBatch complete. Successfully summarized {processed_count} new document(s).")
 
 
 if __name__ == "__main__":
