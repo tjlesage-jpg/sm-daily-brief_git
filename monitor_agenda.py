@@ -102,7 +102,7 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     """
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model = "gemini-2.5-flash",
         contents=[uploaded_file, prompt],
         config=types.GenerateContentConfig(
             temperature=0.2,
