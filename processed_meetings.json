@@ -1,1 +1,37 @@
-{}
+{
+  "Minutes_Minutes__07212026-1081": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_07212026-1081",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "Jul 21, 2026 \u2014\u2009Posted Jul 17, 2026 5:00 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__07212026-1081.md"
+  },
+  "Minutes_Minutes__06232026-1075": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_06232026-1075",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "Jun 23, 2026 \u2014\u2009Amended Jun 22, 2026 1:07 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__06232026-1075.md"
+  },
+  "Minutes_Minutes__06022026-1067": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_06022026-1067",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "Jun 2, 2026 \u2014\u2009Posted May 29, 2026 4:04 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__06022026-1067.md"
+  },
+  "Minutes_Minutes__05192026-1057": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_05192026-1057",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "May 19, 2026 \u2014\u2009Posted May 15, 2026 3:57 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__05192026-1057.md"
+  },
+  "Minutes_Minutes__05062026-1051": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_05062026-1051",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "May 6, 2026 \u2014\u2009Posted May 5, 2026 8:23 AM Common Council Special Meeting Agenda (PDF) - 6:30 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__05062026-1051.md"
+  }
+}
