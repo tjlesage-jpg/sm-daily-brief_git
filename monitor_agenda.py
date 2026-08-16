@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from google import genai
@@ -13,7 +14,6 @@ CACHE_FILE = "processed_meetings.json"
 OUTPUT_DIR = "briefings"
 DOWNLOAD_DIR = "downloads"
 
-# Initialize Google GenAI client
 client = genai.Client()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -21,41 +21,29 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 def get_available_model():
-  """Dynamically queries the API to select the best available Flash model for your key."""
   try:
     models = list(client.models.list())
     supported = [
         m.name
         for m in models
-        if hasattr(m, 'supported_actions')
-        and 'generateContent' in m.supported_actions
-        or hasattr(m, 'name')
+        if (hasattr(m, "supported_actions") and "generateContent" in m.supported_actions)
+        or hasattr(m, "name")
     ]
-
-    # Preference order for fast, high-context briefing generation
     for candidate in [
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-001',
-        'gemini-flash',
-        'gemini-2.5-flash',
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-flash",
     ]:
       for m in supported:
         if candidate in m:
-          model_name = m.replace('models/', '')
-          print(f'Selected active Gemini model: {model_name}')
+          model_name = m.replace("models/", "")
+          print(f"Selected active Gemini model: {model_name}")
           return model_name
-
-    # Fallback to the first available generateContent model
     if supported:
-      fallback = supported[0].replace('models/', '')
-      print(f'Fallback Gemini model selected: {fallback}')
-      return fallback
+      return supported[0].replace("models/", "")
   except Exception as e:
-    print(
-        f'Could not list models dynamically ({e}), falling back to'
-        ' gemini-2.0-flash'
-    )
-  return 'gemini-2.0-flash'
+    print(f"Model lookup fallback: {e}")
+  return "gemini-2.5-flash"
 
 
 ACTIVE_MODEL = get_available_model()
@@ -64,7 +52,7 @@ ACTIVE_MODEL = get_available_model()
 def load_cache():
   if os.path.exists(CACHE_FILE):
     try:
-      with open(CACHE_FILE, 'r') as f:
+      with open(CACHE_FILE, "r") as f:
         return json.load(f)
     except Exception:
       return {}
@@ -72,45 +60,59 @@ def load_cache():
 
 
 def save_cache(cache):
-  with open(CACHE_FILE, 'w') as f:
+  with open(CACHE_FILE, "w") as f:
     json.dump(cache, f, indent=2)
 
 
 def fetch_meeting_links():
-  """Scrapes AgendaCenter for PDF document links."""
-  headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-  print(f'Fetching {AGENDA_CENTER_URL}...')
+  """Scrapes AgendaCenter specifically targeting Common Council documents."""
+  headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+  print(f"Fetching {AGENDA_CENTER_URL}...")
   response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
   response.raise_for_status()
 
-  soup = BeautifulSoup(response.text, 'html.parser')
+  soup = BeautifulSoup(response.text, "html.parser")
   found_docs = []
 
-  for link in soup.find_all('a', href=True):
-    href = link['href']
+  for link in soup.find_all("a", href=True):
+    href = link["href"]
     text = link.get_text(strip=True)
 
-    if 'viewfile' in href.lower() or href.lower().endswith('.pdf'):
+    if "/AgendaCenter/ViewFile/" in href:
       full_url = urljoin(BASE_URL, href)
-      parent_row = link.find_parent('tr') or link.find_parent('div')
-      row_text = parent_row.get_text(' ', strip=True) if parent_row else text
+      parent_row = link.find_parent("tr") or link.find_parent("div")
+      row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-      found_docs.append(
-          {'url': full_url, 'title': text or 'Document', 'context': row_text}
-      )
+      # Filter: Focus on Common Council (or include Plan Commission / Public Works if desired)
+      is_common_council = "common council" in row_text.lower() or "common council" in text.lower()
+      
+      # Determine if document is Minutes or Agenda
+      doc_type = "Minutes" if "minutes" in href.lower() or "minutes" in text.lower() else "Agenda"
 
-  print(f'Total matching document links identified: {len(found_docs)}')
+      if is_common_council:
+        found_docs.append({
+            "url": full_url,
+            "title": f"Common Council {doc_type} - {text}",
+            "doc_type": doc_type,
+            "context": row_text,
+        })
+
+  print(f"Identified {len(found_docs)} Common Council document links.")
+  # Prioritize Minutes over Agendas
+  found_docs.sort(key=lambda x: 0 if x["doc_type"] == "Minutes" else 1)
   return found_docs
 
 
 def is_pdf(content):
-  return content.startswith(b'%PDF')
+  return content.startswith(b"%PDF")
 
 
 def summarize_pdf_with_gemini(pdf_path, meeting_context):
-  """Uploads PDF to Gemini and produces a structured briefing."""
-  print(f'Uploading {pdf_path} to Gemini...')
+  """Uploads PDF to Gemini and produces a structured briefing with Jekyll frontmatter."""
+  print(f"Uploading {pdf_path} to Gemini...")
   uploaded_file = client.files.upload(file=pdf_path)
+
+  headline = meeting_context.split("—")[0].strip() if "—" in meeting_context else "Common Council Meeting"
 
   prompt = f"""
     You are an objective, hyper-local civic reporter for South Milwaukee, WI.
@@ -118,15 +120,15 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
 
     Context / Header: {meeting_context}
 
-    Your output MUST start with YAML frontmatter at the very top, exactly like this:
+    Your output MUST begin with YAML frontmatter at the very top:
     ---
-    title: "{meeting_context.split('—')[0].strip() if '—' in meeting_context else 'Meeting Briefing'}"
+    title: "{headline}"
     layout: default
     ---
 
-      # {meeting_context.split('—')[0].strip() if '—' in meeting_context else 'South Milwaukee Municipal Briefing'}
+    # {headline}
 
-    **Document:** {meeting_context}
+    **Document Context:** {meeting_context}
 
     ### Executive Summary
     Brief 2-3 sentence overview of the meeting's primary focus.
@@ -166,55 +168,47 @@ def main():
   docs = fetch_meeting_links()
 
   processed_count = 0
-  max_per_run = 5
+  # Increased to 10 to capture all recent council meetings
+  max_per_run = 10
 
   for item in docs:
     if processed_count >= max_per_run:
-      print(f'Reached batch limit of {max_per_run} files for this run.')
+      print(f"Reached batch limit of {max_per_run} files for this run.")
       break
 
-    doc_url = item['url']
-    clean_id = (
-        doc_url.split('ViewFile/')[-1]
-        .replace('/', '_')
-        .replace('?', '_')
-        .replace('&', '_')
-    )
+    doc_url = item["url"]
+    
+    # Construct a unique ID that includes doc type (Minutes vs Agenda)
+    raw_id = doc_url.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
+    clean_id = f"{item['doc_type']}_{raw_id}"
 
     if clean_id in cache:
       continue
 
-    print(
-        f"\nProcessing [{processed_count + 1}/{max_per_run}]:"
-        f" {item['context'][:70]}..."
-    )
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    print(f"\nProcessing [{processed_count + 1}/{max_per_run}]: {item['title']}...")
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
       res = requests.get(doc_url, headers=headers, timeout=45)
-      if res.status_code == 200 and (
-          is_pdf(res.content)
-          or 'pdf' in res.headers.get('Content-Type', '').lower()
-      ):
-        pdf_path = os.path.join(DOWNLOAD_DIR, f'{clean_id}.pdf')
-        with open(pdf_path, 'wb') as f:
+      if res.status_code == 200 and (is_pdf(res.content) or "pdf" in res.headers.get("Content-Type", "").lower()):
+        pdf_path = os.path.join(DOWNLOAD_DIR, f"{clean_id}.pdf")
+        with open(pdf_path, "wb") as f:
           f.write(res.content)
 
-        # Generate summary
-        summary_md = summarize_pdf_with_gemini(pdf_path, item['context'])
+        summary_md = summarize_pdf_with_gemini(pdf_path, item["context"])
 
-        output_filename = os.path.join(OUTPUT_DIR, f'{clean_id}.md')
-        with open(output_filename, 'w', encoding='utf-8') as out:
+        output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
+        with open(output_filename, "w", encoding="utf-8") as out:
           out.write(summary_md)
 
-        print(f'Saved briefing to {output_filename}')
+        print(f"Saved briefing to {output_filename}")
 
-        # Save to cache ONLY when file generation succeeds
         cache[clean_id] = {
-            'url': doc_url,
-            'title': item['title'],
-            'context': item['context'],
-            'output_file': output_filename,
+            "url": doc_url,
+            "title": item["title"],
+            "doc_type": item["doc_type"],
+            "context": item["context"],
+            "output_file": output_filename,
         }
         save_cache(cache)
         processed_count += 1
@@ -222,16 +216,16 @@ def main():
         if os.path.exists(pdf_path):
           os.remove(pdf_path)
 
+        # 12-second throttle to respect Gemini Free Tier rate limits (5 RPM)
+        time.sleep(12)
+
       else:
-        print(f'Skipping non-PDF link: {doc_url}')
+        print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
-      print(f'Error processing {doc_url}: {e}')
+      print(f"Error processing {doc_url}: {e}")
 
-  print(
-      '\nBatch complete. Successfully summarized'
-      f' {processed_count} new document(s).'
-  )
+  print(f"\nBatch complete. Successfully summarized {processed_count} Common Council document(s).")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   main()
