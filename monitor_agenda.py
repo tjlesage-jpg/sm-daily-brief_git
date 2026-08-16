@@ -1,10 +1,10 @@
-import os
 import json
-import requests
-from bs4 import BeautifulSoup
+import os
 from urllib.parse import urljoin
+from bs4 import BeautifulSoup
 from google import genai
 from google.genai import types
+import requests
 
 # Configuration
 BASE_URL = "https://www.southmilwaukee.gov"
@@ -20,60 +20,99 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
+def get_available_model():
+  """Dynamically queries the API to select the best available Flash model for your key."""
+  try:
+    models = list(client.models.list())
+    supported = [
+        m.name
+        for m in models
+        if hasattr(m, 'supported_actions')
+        and 'generateContent' in m.supported_actions
+        or hasattr(m, 'name')
+    ]
+
+    # Preference order for fast, high-context briefing generation
+    for candidate in [
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-001',
+        'gemini-flash',
+        'gemini-2.5-flash',
+    ]:
+      for m in supported:
+        if candidate in m:
+          model_name = m.replace('models/', '')
+          print(f'Selected active Gemini model: {model_name}')
+          return model_name
+
+    # Fallback to the first available generateContent model
+    if supported:
+      fallback = supported[0].replace('models/', '')
+      print(f'Fallback Gemini model selected: {fallback}')
+      return fallback
+  except Exception as e:
+    print(
+        f'Could not list models dynamically ({e}), falling back to'
+        ' gemini-2.0-flash'
+    )
+  return 'gemini-2.0-flash'
+
+
+ACTIVE_MODEL = get_available_model()
+
+
 def load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+  if os.path.exists(CACHE_FILE):
+    try:
+      with open(CACHE_FILE, 'r') as f:
+        return json.load(f)
+    except Exception:
+      return {}
+  return {}
 
 
 def save_cache(cache):
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=2)
+  with open(CACHE_FILE, 'w') as f:
+    json.dump(cache, f, indent=2)
 
 
 def fetch_meeting_links():
-    """Scrapes AgendaCenter focusing on PDF document links."""
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    print(f"Fetching {AGENDA_CENTER_URL}...")
-    response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
-    response.raise_for_status()
+  """Scrapes AgendaCenter for PDF document links."""
+  headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+  print(f'Fetching {AGENDA_CENTER_URL}...')
+  response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
+  response.raise_for_status()
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    found_docs = []
+  soup = BeautifulSoup(response.text, 'html.parser')
+  found_docs = []
 
-    for link in soup.find_all("a", href=True):
-        href = link["href"]
-        text = link.get_text(strip=True)
+  for link in soup.find_all('a', href=True):
+    href = link['href']
+    text = link.get_text(strip=True)
 
-        if "viewfile" in href.lower() or href.lower().endswith(".pdf"):
-            full_url = urljoin(BASE_URL, href)
-            parent_row = link.find_parent("tr") or link.find_parent("div")
-            row_text = parent_row.get_text(" ", strip=True) if parent_row else text
+    if 'viewfile' in href.lower() or href.lower().endswith('.pdf'):
+      full_url = urljoin(BASE_URL, href)
+      parent_row = link.find_parent('tr') or link.find_parent('div')
+      row_text = parent_row.get_text(' ', strip=True) if parent_row else text
 
-            found_docs.append({
-                "url": full_url,
-                "title": text or "Document",
-                "context": row_text
-            })
+      found_docs.append(
+          {'url': full_url, 'title': text or 'Document', 'context': row_text}
+      )
 
-    print(f"Total matching document links identified: {len(found_docs)}")
-    return found_docs
+  print(f'Total matching document links identified: {len(found_docs)}')
+  return found_docs
 
 
 def is_pdf(content):
-    return content.startswith(b"%PDF")
+  return content.startswith(b'%PDF')
 
 
 def summarize_pdf_with_gemini(pdf_path, meeting_context):
-    """Uploads PDF to Gemini and produces a structured briefing."""
-    print(f"Uploading {pdf_path} to Gemini...")
-    uploaded_file = client.files.upload(file=pdf_path)
+  """Uploads PDF to Gemini and produces a structured briefing."""
+  print(f'Uploading {pdf_path} to Gemini...')
+  uploaded_file = client.files.upload(file=pdf_path)
 
-    prompt = f"""
+  prompt = f"""
     You are an objective, hyper-local civic reporter for South Milwaukee, WI.
     Analyze this municipal meeting document and write a clean, structured recap for residents.
 
@@ -101,81 +140,93 @@ def summarize_pdf_with_gemini(pdf_path, meeting_context):
     - Plain-language summary of what this means for local residents and taxpayers.
     """
 
-    # Using gemini-1.5-flash as the primary stable model
-    response = client.models.generate_content(
-        model="gemini-1.5-flash",
-        contents=[uploaded_file, prompt],
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-        )
-    )
+  response = client.models.generate_content(
+      model=ACTIVE_MODEL,
+      contents=[uploaded_file, prompt],
+      config=types.GenerateContentConfig(
+          temperature=0.2,
+      ),
+  )
 
-    try:
-        client.files.delete(name=uploaded_file.name)
-    except Exception:
-        pass
+  try:
+    client.files.delete(name=uploaded_file.name)
+  except Exception:
+    pass
 
-    return response.text
+  return response.text
 
 
 def main():
-    cache = load_cache()
-    docs = fetch_meeting_links()
+  cache = load_cache()
+  docs = fetch_meeting_links()
 
-    processed_count = 0
-    max_per_run = 5
+  processed_count = 0
+  max_per_run = 5
 
-    for item in docs:
-        if processed_count >= max_per_run:
-            print(f"Reached batch limit of {max_per_run} files for this run.")
-            break
+  for item in docs:
+    if processed_count >= max_per_run:
+      print(f'Reached batch limit of {max_per_run} files for this run.')
+      break
 
-        doc_url = item["url"]
-        clean_id = doc_url.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
+    doc_url = item['url']
+    clean_id = (
+        doc_url.split('ViewFile/')[-1]
+        .replace('/', '_')
+        .replace('?', '_')
+        .replace('&', '_')
+    )
 
-        if clean_id in cache:
-            continue
+    if clean_id in cache:
+      continue
 
-        print(f"\nProcessing [{processed_count + 1}/{max_per_run}]: {item['context'][:70]}...")
-        headers = {"User-Agent": "Mozilla/5.0"}
-        
-        try:
-            res = requests.get(doc_url, headers=headers, timeout=45)
-            if res.status_code == 200 and (is_pdf(res.content) or "pdf" in res.headers.get("Content-Type", "").lower()):
-                pdf_path = os.path.join(DOWNLOAD_DIR, f"{clean_id}.pdf")
-                with open(pdf_path, "wb") as f:
-                    f.write(res.content)
+    print(
+        f"\nProcessing [{processed_count + 1}/{max_per_run}]:"
+        f" {item['context'][:70]}..."
+    )
+    headers = {'User-Agent': 'Mozilla/5.0'}
 
-                # Generate summary
-                summary_md = summarize_pdf_with_gemini(pdf_path, item["context"])
-                
-                output_filename = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
-                with open(output_filename, "w", encoding="utf-8") as out:
-                    out.write(summary_md)
+    try:
+      res = requests.get(doc_url, headers=headers, timeout=45)
+      if res.status_code == 200 and (
+          is_pdf(res.content)
+          or 'pdf' in res.headers.get('Content-Type', '').lower()
+      ):
+        pdf_path = os.path.join(DOWNLOAD_DIR, f'{clean_id}.pdf')
+        with open(pdf_path, 'wb') as f:
+          f.write(res.content)
 
-                print(f"Saved briefing to {output_filename}")
-                
-                # Update cache only AFTER successful file write
-                cache[clean_id] = {
-                    "url": doc_url,
-                    "title": item["title"],
-                    "context": item["context"],
-                    "output_file": output_filename
-                }
-                save_cache(cache)
-                processed_count += 1
+        # Generate summary
+        summary_md = summarize_pdf_with_gemini(pdf_path, item['context'])
 
-                # Clean up local PDF
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
+        output_filename = os.path.join(OUTPUT_DIR, f'{clean_id}.md')
+        with open(output_filename, 'w', encoding='utf-8') as out:
+          out.write(summary_md)
 
-            else:
-                print(f"Skipping non-PDF link: {doc_url}")
-        except Exception as e:
-            print(f"Error processing {doc_url}: {e}")
+        print(f'Saved briefing to {output_filename}')
 
-    print(f"\nBatch complete. Successfully summarized {processed_count} new document(s).")
+        # Save to cache ONLY when file generation succeeds
+        cache[clean_id] = {
+            'url': doc_url,
+            'title': item['title'],
+            'context': item['context'],
+            'output_file': output_filename,
+        }
+        save_cache(cache)
+        processed_count += 1
+
+        if os.path.exists(pdf_path):
+          os.remove(pdf_path)
+
+      else:
+        print(f'Skipping non-PDF link: {doc_url}')
+    except Exception as e:
+      print(f'Error processing {doc_url}: {e}')
+
+  print(
+      '\nBatch complete. Successfully summarized'
+      f' {processed_count} new document(s).'
+  )
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+  main()
