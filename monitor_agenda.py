@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
@@ -22,43 +23,44 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 def get_active_models():
-  """Discovers all currently supported generateContent models for this API key."""
+  """Discovers active text-generation models for this API key in optimal priority order."""
   valid_models = []
   try:
     models = list(client.models.list())
     for m in models:
       name = m.name.replace("models/", "")
-      # Look for models capable of text generation
-      if hasattr(m, "supported_actions") and (
-          "generateContent" in m.supported_actions or not m.supported_actions
+      # Exclude TTS, Image generation, and robotics endpoints
+      if any(
+          bad in name
+          for bad in ["tts", "image", "clip", "robotics", "computer-use"]
       ):
-        valid_models.append(name)
-      elif not hasattr(m, "supported_actions"):
-        valid_models.append(name)
+        continue
+      valid_models.append(name)
 
-    # Sort so flash/fast models are attempted first
-    preferred_order = [
+    # Priority order of responsive, high-quota models
+    priority_order = [
         "gemini-3.7-flash",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
+        "gemma-4-26b-a4b-it",
+        "gemma-4-31b-it",
+        "gemini-flash-latest",
+        "gemini-3-flash-preview",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-pro-latest",
     ]
-    sorted_models = []
-    for pref in preferred_order:
-      for vm in valid_models:
-        if pref in vm and vm not in sorted_models:
-          sorted_models.append(vm)
+    sorted_models = [m for m in priority_order if m in valid_models]
+    for m in valid_models:
+      if m not in sorted_models:
+        sorted_models.append(m)
 
-    for vm in valid_models:
-      if vm not in sorted_models:
-        sorted_models.append(vm)
-
-    print(f"Discovered {len(sorted_models)} active model(s): {sorted_models}")
+    print(
+        f"Configured {len(sorted_models)} active text model(s):"
+        f" {sorted_models[:6]}"
+    )
     return sorted_models if sorted_models else ["gemini-3.7-flash"]
   except Exception as e:
     print(f"Error querying model list: {e}")
-    return ["gemini-3.7-flash"]
+    return ["gemini-3.7-flash", "gemma-4-26b-a4b-it"]
 
 
 AVAILABLE_MODELS = get_active_models()
@@ -89,8 +91,17 @@ def get_clean_id(href, doc_type):
   return f"{doc_type}_{raw_id}"
 
 
+def extract_date_key(context_text, href):
+  """Extracts an MMDDYYYY numeric key for sorting newest meetings first."""
+  match = re.search(r"(\d{2})(\d{2})(\d{4})", href)
+  if match:
+    month, day, year = match.groups()
+    return f"{year}{month}{day}"
+  return "00000000"
+
+
 def fetch_new_meeting_links(cache):
-  """Scrapes AgendaCenter and extracts only new Common Council documents."""
+  """Scrapes AgendaCenter and extracts new Common Council documents sorted newest first."""
   headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
   print(f"Checking {AGENDA_CENTER_URL} for Common Council documents...")
   response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
@@ -122,31 +133,33 @@ def fetch_new_meeting_links(cache):
       )
       clean_id = get_clean_id(href, doc_type)
 
-      # Skip if already recorded and markdown file exists
       expected_md = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
       if clean_id in cache and os.path.exists(expected_md):
         continue
 
       full_url = urljoin(BASE_URL, href)
+      sort_key = extract_date_key(row_text, href)
+
       new_docs.append({
           "id": clean_id,
           "url": full_url,
           "title": f"Common Council {doc_type} - {text}",
           "doc_type": doc_type,
           "context": row_text,
+          "sort_key": sort_key,
       })
 
   print(
       f"Identified {total_council_docs} total Common Council documents. Found"
       f" {len(new_docs)} new/unprocessed item(s)."
   )
-  # Prioritize Minutes over Agendas
-  new_docs.sort(key=lambda x: 0 if x["doc_type"] == "Minutes" else 1)
+
+  # Sort strictly newest to oldest
+  new_docs.sort(key=lambda x: x["sort_key"], reverse=True)
   return new_docs
 
 
 def extract_text_from_pdf(pdf_path):
-  """Extracts clean text directly from PDF without uploading to Files API."""
   try:
     reader = PdfReader(pdf_path)
     text = ""
@@ -161,7 +174,6 @@ def extract_text_from_pdf(pdf_path):
 
 
 def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
-  """Summarizes meeting content with dynamic model fallback and rate limit handling."""
   headline = (
       meeting_context.split("—")[0].strip()
       if "—" in meeting_context
@@ -201,7 +213,6 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
     - Plain-language summary of what this means for local residents and taxpayers.
     """
 
-  # Prepare payload: use local text if available, fallback to file upload
   uploaded_file = None
   if text_content and len(text_content) > 100:
     contents = [text_content, prompt]
@@ -232,14 +243,12 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
     except Exception as e:
       err_str = str(e)
       if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-        print(f"Model {model_name} hit daily/rate quota. Trying next model...")
+        print(f"Model {model_name} quota reached. Trying next model...")
       elif "503" in err_str or "UNAVAILABLE" in err_str:
-        print(
-            f"Model {model_name} temporarily high demand. Trying next model..."
-        )
+        print(f"Model {model_name} high demand. Trying next model...")
       else:
         print(f"Model {model_name} error: {e}")
-      time.sleep(2)
+      time.sleep(1)
 
   if uploaded_file:
     try:
@@ -258,8 +267,8 @@ def main():
     print("All Common Council meetings are up to date. Nothing to do.")
     return
 
-  # Process up to 5 documents per daily run to stay well within free tier limits
-  max_per_run = 5
+  # Process 10 documents per run
+  max_per_run = 10
   processed_count = 0
 
   for item in new_docs[:max_per_run]:
@@ -308,19 +317,10 @@ def main():
           os.remove(pdf_path)
 
         if quota_exhausted:
-          print(
-              "\nAll available models have exhausted their free-tier quota for"
-              " today."
-          )
-          print(
-              "Saved completed items. The remaining backlog will automatically"
-              " continue on the next scheduled run."
-          )
+          print("\nAll models currently busy or at quota limit.")
           break
 
-        # Throttling to prevent burst-rate spikes
-        time.sleep(10)
-
+        time.sleep(5)
       else:
         print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
