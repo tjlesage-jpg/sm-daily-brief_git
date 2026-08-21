@@ -250,5 +250,19 @@
     "doc_type": "Minutes",
     "context": "Jan 20, 2026 \u2014\u2009Posted Jan 16, 2026 3:42 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
     "output_file": "briefings/Minutes_Minutes__01202026-1008.md"
+  },
+  "Agenda_Agenda__01062026-1003": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_01062026-1003",
+    "title": "Common Council Agenda - Agenda",
+    "doc_type": "Agenda",
+    "context": "Jan 6, 2026 \u2014\u2009Posted Jan 2, 2026 2:13 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Agenda_Agenda__01062026-1003.md"
+  },
+  "Minutes_Minutes__01062026-1003": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_01062026-1003",
+    "title": "Common Council Minutes - ",
+    "doc_type": "Minutes",
+    "context": "Jan 6, 2026 \u2014\u2009Posted Jan 2, 2026 2:13 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
+    "output_file": "briefings/Minutes_Minutes__01062026-1003.md"
   }
 }
