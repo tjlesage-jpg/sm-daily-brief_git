@@ -23,21 +23,15 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 def get_active_models():
-  """Discovers active text-generation models for this API key in optimal priority order."""
   valid_models = []
   try:
     models = list(client.models.list())
     for m in models:
       name = m.name.replace("models/", "")
-      # Exclude TTS, Image generation, and robotics endpoints
-      if any(
-          bad in name
-          for bad in ["tts", "image", "clip", "robotics", "computer-use"]
-      ):
+      if any(bad in name for bad in ["tts", "image", "clip", "robotics", "computer-use"]):
         continue
       valid_models.append(name)
 
-    # Priority order of responsive, high-quota models
     priority_order = [
         "gemini-3.7-flash",
         "gemma-4-26b-a4b-it",
@@ -52,11 +46,6 @@ def get_active_models():
     for m in valid_models:
       if m not in sorted_models:
         sorted_models.append(m)
-
-    print(
-        f"Configured {len(sorted_models)} active text model(s):"
-        f" {sorted_models[:6]}"
-    )
     return sorted_models if sorted_models else ["gemini-3.7-flash"]
   except Exception as e:
     print(f"Error querying model list: {e}")
@@ -81,27 +70,23 @@ def save_cache(cache):
     json.dump(cache, f, indent=2)
 
 
-def get_clean_id(href, doc_type):
-  raw_id = (
-      href.split("ViewFile/")[-1]
-      .replace("/", "_")
-      .replace("?", "_")
-      .replace("&", "_")
-  )
-  return f"{doc_type}_{raw_id}"
-
-
-def extract_date_key(context_text, href):
-  """Extracts an MMDDYYYY numeric key for sorting newest meetings first."""
+def parse_iso_date(href):
+  """Extracts MMDDYYYY from CivicPlus URL and converts to YYYY-MM-DD."""
   match = re.search(r"(\d{2})(\d{2})(\d{4})", href)
   if match:
     month, day, year = match.groups()
-    return f"{year}{month}{day}"
-  return "00000000"
+    return f"{year}-{month}-{day}"
+  return "1970-01-01"
+
+
+def get_clean_id(href, doc_type):
+  iso_date = parse_iso_date(href)
+  raw_id = href.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
+  # Produces: 2026-08-25_Minutes__08252026-1099
+  return f"{iso_date}_{doc_type}_{raw_id}"
 
 
 def fetch_new_meeting_links(cache):
-  """Scrapes AgendaCenter and extracts new Common Council documents sorted newest first."""
   headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
   print(f"Checking {AGENDA_CENTER_URL} for Common Council documents...")
   response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
@@ -119,43 +104,32 @@ def fetch_new_meeting_links(cache):
       parent_row = link.find_parent("tr") or link.find_parent("div")
       row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-      if not (
-          "common council" in row_text.lower()
-          or "common council" in text.lower()
-      ):
+      if not ("common council" in row_text.lower() or "common council" in text.lower()):
         continue
 
       total_council_docs += 1
-      doc_type = (
-          "Minutes"
-          if "minutes" in href.lower() or "minutes" in text.lower()
-          else "Agenda"
-      )
+      doc_type = "Minutes" if "minutes" in href.lower() or "minutes" in text.lower() else "Agenda"
       clean_id = get_clean_id(href, doc_type)
+      iso_date = parse_iso_date(href)
 
       expected_md = os.path.join(OUTPUT_DIR, f"{clean_id}.md")
       if clean_id in cache and os.path.exists(expected_md):
         continue
 
       full_url = urljoin(BASE_URL, href)
-      sort_key = extract_date_key(row_text, href)
 
       new_docs.append({
           "id": clean_id,
           "url": full_url,
           "title": f"Common Council {doc_type} - {text}",
           "doc_type": doc_type,
+          "iso_date": iso_date,
           "context": row_text,
-          "sort_key": sort_key,
       })
 
-  print(
-      f"Identified {total_council_docs} total Common Council documents. Found"
-      f" {len(new_docs)} new/unprocessed item(s)."
-  )
-
-  # Sort strictly newest to oldest
-  new_docs.sort(key=lambda x: x["sort_key"], reverse=True)
+  print(f"Identified {total_council_docs} total Common Council documents. Found {len(new_docs)} new/unprocessed item(s).")
+  # Sort strictly descending: 2026-08-25 down to 2026-01-01
+  new_docs.sort(key=lambda x: x["iso_date"], reverse=True)
   return new_docs
 
 
@@ -173,12 +147,8 @@ def extract_text_from_pdf(pdf_path):
     return ""
 
 
-def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
-  headline = (
-      meeting_context.split("—")[0].strip()
-      if "—" in meeting_context
-      else "Common Council Meeting"
-  )
+def summarize_content_with_gemini(text_content, pdf_path, meeting_context, iso_date, doc_type):
+  headline = meeting_context.split("—")[0].strip() if "—" in meeting_context else f"Common Council {doc_type}"
 
   prompt = f"""
     You are an objective, hyper-local civic reporter for South Milwaukee, WI.
@@ -188,11 +158,13 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
 
     Your output MUST begin with YAML frontmatter at the very top:
     ---
-    title: "{headline}"
+    title: "{iso_date} - {headline}"
+    date: {iso_date}
+    doc_type: "{doc_type}"
     layout: default
     ---
 
-    # {headline}
+    # {headline} ({iso_date})
 
     **Document Context:** {meeting_context}
 
@@ -217,9 +189,6 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
   if text_content and len(text_content) > 100:
     contents = [text_content, prompt]
   else:
-    print(
-        f"PDF does not contain plain text; uploading {pdf_path} to Gemini..."
-    )
     uploaded_file = client.files.upload(file=pdf_path)
     contents = [uploaded_file, prompt]
 
@@ -232,22 +201,14 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context):
       response = client.models.generate_content(
           model=model_name,
           contents=contents,
-          config=types.GenerateContentConfig(
-              temperature=0.2,
-          ),
+          config=types.GenerateContentConfig(temperature=0.2),
       )
       summary_result = response.text
       quota_exhausted_all = False
       print(f"Successfully generated summary with {model_name}.")
       break
     except Exception as e:
-      err_str = str(e)
-      if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-        print(f"Model {model_name} quota reached. Trying next model...")
-      elif "503" in err_str or "UNAVAILABLE" in err_str:
-        print(f"Model {model_name} high demand. Trying next model...")
-      else:
-        print(f"Model {model_name} error: {e}")
+      print(f"Model {model_name} error: {e}")
       time.sleep(1)
 
   if uploaded_file:
@@ -267,7 +228,6 @@ def main():
     print("All Common Council meetings are up to date. Nothing to do.")
     return
 
-  # Process 10 documents per run
   max_per_run = 10
   processed_count = 0
 
@@ -275,25 +235,19 @@ def main():
     doc_url = item["url"]
     clean_id = item["id"]
 
-    print(
-        f"\nProcessing [{processed_count + 1}/{min(len(new_docs), max_per_run)}]:"
-        f" {item['title']}..."
-    )
+    print(f"\nProcessing [{processed_count + 1}/{min(len(new_docs), max_per_run)}]: {item['title']}...")
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
       res = requests.get(doc_url, headers=headers, timeout=45)
-      if res.status_code == 200 and (
-          res.content.startswith(b"%PDF")
-          or "pdf" in res.headers.get("Content-Type", "").lower()
-      ):
+      if res.status_code == 200 and (res.content.startswith(b"%PDF") or "pdf" in res.headers.get("Content-Type", "").lower()):
         pdf_path = os.path.join(DOWNLOAD_DIR, f"{clean_id}.pdf")
         with open(pdf_path, "wb") as f:
           f.write(res.content)
 
         text_content = extract_text_from_pdf(pdf_path)
         summary_md, quota_exhausted = summarize_content_with_gemini(
-            text_content, pdf_path, item["context"]
+            text_content, pdf_path, item["context"], item["iso_date"], item["doc_type"]
         )
 
         if summary_md:
@@ -306,8 +260,8 @@ def main():
           cache[clean_id] = {
               "url": doc_url,
               "title": item["title"],
+              "iso_date": item["iso_date"],
               "doc_type": item["doc_type"],
-              "context": item["context"],
               "output_file": output_filename,
           }
           save_cache(cache)
@@ -321,15 +275,10 @@ def main():
           break
 
         time.sleep(5)
-      else:
-        print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
       print(f"Error processing {doc_url}: {e}")
 
-  print(
-      f"\nRun complete. Successfully generated {processed_count} new"
-      " briefing(s)."
-  )
+  print(f"\nRun complete. Successfully generated {processed_count} new briefing(s).")
 
 
 if __name__ == "__main__":
