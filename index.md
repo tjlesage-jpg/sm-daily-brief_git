@@ -52,19 +52,19 @@ title: South Milwaukee Daily Brief
 
   /* Left Main Content Feed */
   .content-main {
-    flex: 1 1 68%;
+    flex: 1 1 66%;
   }
 
   .feed-header {
     margin-top: 0;
     margin-bottom: 20px;
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     color: #1a1a1a;
     border-bottom: 2px solid #f7d6e0;
     padding-bottom: 8px;
   }
 
-  /* Daily Brief Cards */
+  /* Briefing Cards */
   .brief-card {
     background: #ffffff;
     padding: 22px;
@@ -83,12 +83,12 @@ title: South Milwaukee Daily Brief
 
   .badge {
     display: inline-block;
-    padding: 3px 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 2px 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
     border-radius: 4px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
   }
 
   .badge-minutes {
@@ -141,7 +141,7 @@ title: South Milwaukee Daily Brief
 
   /* Right Sidebar Area */
   .sidebar-right {
-    flex: 0 0 280px;
+    flex: 0 0 300px;
     background: #ffffff;
     padding: 20px;
     border-radius: 8px;
@@ -167,8 +167,14 @@ title: South Milwaukee Daily Brief
   }
 
   .briefing-list li {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     line-height: 1.35;
+    padding-bottom: 8px;
+    border-bottom: 1px dotted #f7d6e0;
+  }
+
+  .briefing-list li:last-child {
+    border-bottom: none;
   }
 
   .briefing-list a {
@@ -176,6 +182,7 @@ title: South Milwaukee Daily Brief
     color: #991b3b;
     text-decoration: none;
     display: block;
+    margin-top: 3px;
     word-break: break-word;
   }
 
@@ -208,49 +215,61 @@ title: South Milwaukee Daily Brief
 
   <div class="main-layout">
     
-    <!-- Left Column: Daily Briefing Feed with Executive Summaries -->
+    <!-- Left Column: Approved Minutes Only -->
     <main class="content-main">
-      <h2 class="feed-header">Latest Meeting Briefs</h2>
+      <h2 class="feed-header">Latest Approved Minutes</h2>
       
       {% assign raw_briefs = site.pages | where_exp: "item", "item.path contains 'briefings/'" %}
       {% assign sorted_briefs = raw_briefs | sort: "name" | reverse %}
 
+      {% assign minutes_count = 0 %}
       {% for item in sorted_briefs %}
-        <article class="brief-card">
-          <div class="brief-meta">
-            {% if item.doc_type == "Minutes" or item.name contains "Minutes" %}
+        {% if item.doc_type == "Minutes" or item.name contains "Minutes" %}
+          {% assign minutes_count = minutes_count | plus: 1 %}
+          <article class="brief-card">
+            <div class="brief-meta">
               <span class="badge badge-minutes">Approved Minutes</span>
-            {% else %}
-              <span class="badge badge-agenda">Meeting Agenda</span>
-            {% endif %}
-            <span class="brief-date">{{ item.date | default: item.name | slice: 0, 10 }}</span>
-          </div>
-          
-          <h3>
-            <a href="{{ item.url | relative_url }}">
-              {{ item.title | default: item.name | remove: ".md" }}
-            </a>
-          </h3>
+              <span class="brief-date">{{ item.date | default: item.name | slice: 0, 10 }}</span>
+            </div>
+            
+            <h3>
+              <a href="{{ item.url | relative_url }}">
+                {{ item.title | default: item.name | remove: ".md" }}
+              </a>
+            </h3>
 
-          <div class="brief-summary">
-            {% if item.summary %}
-              {{ item.summary }}
-            {% else %}
-              {{ item.content | strip_html | truncatewords: 35 }}
-            {% endif %}
-          </div>
+            <div class="brief-summary">
+              {% if item.summary %}
+                {{ item.summary }}
+              {% else %}
+                {{ item.content | strip_html | truncatewords: 35 }}
+              {% endif %}
+            </div>
 
-          <a href="{{ item.url | relative_url }}" class="read-more">Read Full Meeting Brief &rarr;</a>
-        </article>
+            <a href="{{ item.url | relative_url }}" class="read-more">Read Full Meeting Brief &rarr;</a>
+          </article>
+        {% endif %}
       {% endfor %}
+
+      {% if minutes_count == 0 %}
+        <p style="color: #666; font-style: italic;">No approved minutes available at this time.</p>
+      {% endif %}
     </main>
 
-    <!-- Right Sidebar: Quick Navigation Index -->
+    <!-- Right Sidebar: Full Archive with Explicit Badges -->
     <aside class="sidebar-right">
       <h3>Meeting Archive</h3>
       <ul class="briefing-list">
         {% for item in sorted_briefs %}
           <li>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+              <span style="font-size: 0.75rem; color: #777;">{{ item.date | default: item.name | slice: 0, 10 }}</span>
+              {% if item.doc_type == "Minutes" or item.name contains "Minutes" %}
+                <span class="badge badge-minutes">Minutes</span>
+              {% else %}
+                <span class="badge badge-agenda">Agenda</span>
+              {% endif %}
+            </div>
             <a href="{{ item.url | relative_url }}">
               {{ item.title | default: item.name | remove: ".md" }}
             </a>
