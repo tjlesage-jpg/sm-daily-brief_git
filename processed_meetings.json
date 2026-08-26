@@ -264,5 +264,47 @@
     "doc_type": "Minutes",
     "context": "Jan 6, 2026 \u2014\u2009Posted Jan 2, 2026 2:13 PM Common Council Meeting Agenda (PDF) - 7:00 PM Download\u00a0\u25bc Agenda Previous Versions",
     "output_file": "briefings/Minutes_Minutes__01062026-1003.md"
+  },
+  "2026-08-06_Agenda_Agenda__08062026-1091": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_08062026-1091",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-08-06",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-08-06_Agenda_Agenda__08062026-1091.md"
+  },
+  "2026-08-04_Agenda_Agenda__08042026-1090": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_08042026-1090",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-08-04",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-08-04_Agenda_Agenda__08042026-1090.md"
+  },
+  "2026-07-21_Agenda_Agenda__07212026-1081": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_07212026-1081",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-07-21",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-07-21_Agenda_Agenda__07212026-1081.md"
+  },
+  "2026-07-21_Minutes_Minutes__07212026-1081": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_07212026-1081",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-07-21",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-07-21_Minutes_Minutes__07212026-1081.md"
+  },
+  "2026-06-23_Agenda_Agenda__06232026-1075": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_06232026-1075",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-06-23",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-06-23_Agenda_Agenda__06232026-1075.md"
+  },
+  "2026-06-23_Minutes_Minutes__06232026-1075": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_06232026-1075",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-06-23",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-06-23_Minutes_Minutes__06232026-1075.md"
   }
 }
