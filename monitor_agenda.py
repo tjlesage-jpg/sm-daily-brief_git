@@ -23,12 +23,17 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
 def get_active_models():
+  """Discovers active text-generation models for this API key in priority order."""
   valid_models = []
   try:
     models = list(client.models.list())
     for m in models:
       name = m.name.replace("models/", "")
-      if any(bad in name for bad in ["tts", "image", "clip", "robotics", "computer-use"]):
+      # Filter out non-text endpoints
+      if any(
+          bad in name
+          for bad in ["tts", "image", "clip", "robotics", "computer-use"]
+      ):
         continue
       valid_models.append(name)
 
@@ -46,6 +51,11 @@ def get_active_models():
     for m in valid_models:
       if m not in sorted_models:
         sorted_models.append(m)
+
+    print(
+        f"Configured {len(sorted_models)} active text model(s):"
+        f" {sorted_models[:6]}"
+    )
     return sorted_models if sorted_models else ["gemini-3.7-flash"]
   except Exception as e:
     print(f"Error querying model list: {e}")
@@ -81,12 +91,17 @@ def parse_iso_date(href):
 
 def get_clean_id(href, doc_type):
   iso_date = parse_iso_date(href)
-  raw_id = href.split("ViewFile/")[-1].replace("/", "_").replace("?", "_").replace("&", "_")
-  # Produces: 2026-08-25_Minutes__08252026-1099
+  raw_id = (
+      href.split("ViewFile/")[-1]
+      .replace("/", "_")
+      .replace("?", "_")
+      .replace("&", "_")
+  )
   return f"{iso_date}_{doc_type}_{raw_id}"
 
 
 def fetch_new_meeting_links(cache):
+  """Scrapes AgendaCenter and extracts only unprocessed Common Council documents."""
   headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
   print(f"Checking {AGENDA_CENTER_URL} for Common Council documents...")
   response = requests.get(AGENDA_CENTER_URL, headers=headers, timeout=30)
@@ -104,11 +119,18 @@ def fetch_new_meeting_links(cache):
       parent_row = link.find_parent("tr") or link.find_parent("div")
       row_text = parent_row.get_text(" ", strip=True) if parent_row else text
 
-      if not ("common council" in row_text.lower() or "common council" in text.lower()):
+      if not (
+          "common council" in row_text.lower()
+          or "common council" in text.lower()
+      ):
         continue
 
       total_council_docs += 1
-      doc_type = "Minutes" if "minutes" in href.lower() or "minutes" in text.lower() else "Agenda"
+      doc_type = (
+          "Minutes"
+          if "minutes" in href.lower() or "minutes" in text.lower()
+          else "Agenda"
+      )
       clean_id = get_clean_id(href, doc_type)
       iso_date = parse_iso_date(href)
 
@@ -127,13 +149,17 @@ def fetch_new_meeting_links(cache):
           "context": row_text,
       })
 
-  print(f"Identified {total_council_docs} total Common Council documents. Found {len(new_docs)} new/unprocessed item(s).")
-  # Sort strictly descending: 2026-08-25 down to 2026-01-01
+  print(
+      f"Identified {total_council_docs} total Common Council documents. Found"
+      f" {len(new_docs)} new/unprocessed item(s)."
+  )
+  # Sort strictly descending (newest calendar date first)
   new_docs.sort(key=lambda x: x["iso_date"], reverse=True)
   return new_docs
 
 
 def extract_text_from_pdf(pdf_path):
+  """Extracts plain text locally from the PDF."""
   try:
     reader = PdfReader(pdf_path)
     text = ""
@@ -147,8 +173,15 @@ def extract_text_from_pdf(pdf_path):
     return ""
 
 
-def summarize_content_with_gemini(text_content, pdf_path, meeting_context, iso_date, doc_type):
-  headline = meeting_context.split("—")[0].strip() if "—" in meeting_context else f"Common Council {doc_type}"
+def summarize_content_with_gemini(
+    text_content, pdf_path, meeting_context, iso_date, doc_type
+):
+  """Generates briefing with YAML frontmatter containing executive summary."""
+  headline = (
+      meeting_context.split("—")[0].strip()
+      if "—" in meeting_context
+      else f"Common Council {doc_type}"
+  )
 
   prompt = f"""
     You are an objective, hyper-local civic reporter for South Milwaukee, WI.
@@ -156,11 +189,14 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context, iso_d
 
     Context / Header: {meeting_context}
 
-    Your output MUST begin with YAML frontmatter at the very top:
+    Your output MUST begin with YAML frontmatter at the very top. 
+    Crucial: Provide a concise 2-sentence overview in the 'summary' frontmatter field without linebreaks or raw quotes.
+
     ---
     title: "{iso_date} - {headline}"
     date: {iso_date}
     doc_type: "{doc_type}"
+    summary: "Brief 2-sentence summary of the main decisions and discussions from this meeting."
     layout: default
     ---
 
@@ -189,6 +225,9 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context, iso_d
   if text_content and len(text_content) > 100:
     contents = [text_content, prompt]
   else:
+    print(
+        f"PDF does not contain plain text; uploading {pdf_path} to Gemini..."
+    )
     uploaded_file = client.files.upload(file=pdf_path)
     contents = [uploaded_file, prompt]
 
@@ -208,7 +247,13 @@ def summarize_content_with_gemini(text_content, pdf_path, meeting_context, iso_d
       print(f"Successfully generated summary with {model_name}.")
       break
     except Exception as e:
-      print(f"Model {model_name} error: {e}")
+      err_str = str(e)
+      if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+        print(f"Model {model_name} quota reached. Trying next model...")
+      elif "503" in err_str or "UNAVAILABLE" in err_str:
+        print(f"Model {model_name} high demand. Trying next model...")
+      else:
+        print(f"Model {model_name} error: {e}")
       time.sleep(1)
 
   if uploaded_file:
@@ -235,19 +280,29 @@ def main():
     doc_url = item["url"]
     clean_id = item["id"]
 
-    print(f"\nProcessing [{processed_count + 1}/{min(len(new_docs), max_per_run)}]: {item['title']}...")
+    print(
+        f"\nProcessing [{processed_count + 1}/{min(len(new_docs), max_per_run)}]:"
+        f" {item['title']}..."
+    )
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
       res = requests.get(doc_url, headers=headers, timeout=45)
-      if res.status_code == 200 and (res.content.startswith(b"%PDF") or "pdf" in res.headers.get("Content-Type", "").lower()):
+      if res.status_code == 200 and (
+          res.content.startswith(b"%PDF")
+          or "pdf" in res.headers.get("Content-Type", "").lower()
+      ):
         pdf_path = os.path.join(DOWNLOAD_DIR, f"{clean_id}.pdf")
         with open(pdf_path, "wb") as f:
           f.write(res.content)
 
         text_content = extract_text_from_pdf(pdf_path)
         summary_md, quota_exhausted = summarize_content_with_gemini(
-            text_content, pdf_path, item["context"], item["iso_date"], item["doc_type"]
+            text_content,
+            pdf_path,
+            item["context"],
+            item["iso_date"],
+            item["doc_type"],
         )
 
         if summary_md:
@@ -275,10 +330,15 @@ def main():
           break
 
         time.sleep(5)
+      else:
+        print(f"Skipping non-PDF link: {doc_url}")
     except Exception as e:
       print(f"Error processing {doc_url}: {e}")
 
-  print(f"\nRun complete. Successfully generated {processed_count} new briefing(s).")
+  print(
+      f"\nRun complete. Successfully generated {processed_count} new"
+      " briefing(s)."
+  )
 
 
 if __name__ == "__main__":
