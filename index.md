@@ -205,7 +205,7 @@ title: South Milwaukee Common Council Brief
       class="city-logo"
     />
     <h1>South Milwaukee Common Council Brief</h1>
-    <p>Automated civic recaps and meeting intelligence for local residents. You may notice that the council posts more archives than it does minutes. Interesting...</p>
+    <p>Automated civic recaps and meeting intelligence for local residents. You may notice that The Council posts more agendas than it does minutes. Interesting...</p>
   </header>
 
   <div class="main-layout">
