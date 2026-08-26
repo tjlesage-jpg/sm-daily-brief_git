@@ -1,6 +1,6 @@
 ---
 layout: default
-title: South Milwaukee Daily Brief
+title: South Milwaukee Common Council Brief
 ---
 
 <style>
