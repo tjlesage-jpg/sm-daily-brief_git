@@ -192,7 +192,7 @@ title: South Milwaukee Common Council Brief
       alt="City of South Milwaukee Logo" 
       class="city-logo"
     />
-    <h1>South Milwaukee Daily Brief</h1>
+    <h1>South Milwaukee Common Council Brief</h1>
     <p>Automated civic recaps and meeting intelligence for local residents.</p>
   </header>
 
