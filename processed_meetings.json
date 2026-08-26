@@ -355,5 +355,54 @@
     "iso_date": "2026-05-06",
     "doc_type": "Minutes",
     "output_file": "briefings/2026-05-06_Minutes_Minutes__05062026-1051.md"
+  },
+  "2026-05-05_Agenda_Agenda__05052026-1050": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_05052026-1050",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-05-05",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-05-05_Agenda_Agenda__05052026-1050.md"
+  },
+  "2026-05-05_Minutes_Minutes__05052026-1050": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_05052026-1050",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-05-05",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-05-05_Minutes_Minutes__05052026-1050.md"
+  },
+  "2026-05-04_Agenda_Agenda__05042026-1048": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_05042026-1048",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-05-04",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-05-04_Agenda_Agenda__05042026-1048.md"
+  },
+  "2026-05-04_Minutes_Minutes__05042026-1048": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_05042026-1048",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-05-04",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-05-04_Minutes_Minutes__05042026-1048.md"
+  },
+  "2026-04-21_Agenda_Agenda__04212026-1046": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_04212026-1046",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-04-21",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-04-21_Agenda_Agenda__04212026-1046.md"
+  },
+  "2026-04-21_Minutes_Minutes__04212026-1046": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_04212026-1046",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-04-21",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-04-21_Minutes_Minutes__04212026-1046.md"
+  },
+  "2026-04-06_Agenda_Agenda__04062026-1039": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_04062026-1039",
+    "title": "Common Council Agenda - Common Council Special Meeting Agenda (PDF) - 6:00 PM",
+    "iso_date": "2026-04-06",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-04-06_Agenda_Agenda__04062026-1039.md"
   }
 }
