@@ -1,188 +1,200 @@
 ---
-layout: default
+layout: null
 title: South Milwaukee Common Council Brief
 ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>South Milwaukee Common Council Brief</title>
+  <style>
+    /* Suppress default Jekyll theme headers */
+    .page-header, header.site-header:not(.site-wrapper *), body > header:not(.site-wrapper *) {
+      display: none !important;
+    }
 
-<style>
-  html, body {
-    background-color: #fdf0f4 !important;
-    color: #2b2b2b;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-  }
+    html, body {
+      background-color: #fdf0f4 !important;
+      color: #2b2b2b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
 
-  .site-wrapper {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 24px 20px;
-  }
+    .site-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
 
-  .site-header {
-    text-align: center;
-    padding-bottom: 24px;
-    border-bottom: 2px solid #f3d1dc;
-    margin-bottom: 30px;
-  }
+    .site-header {
+      text-align: center;
+      padding-bottom: 24px;
+      border-bottom: 2px solid #f3d1dc;
+      margin-bottom: 30px;
+    }
 
-  .city-logo {
-    max-width: 260px;
-    height: auto;
-    margin-bottom: 12px;
-  }
+    .city-logo {
+      max-width: 260px;
+      height: auto;
+      margin-bottom: 12px;
+    }
 
-  .site-header h1 {
-    margin: 0;
-    font-size: 1.9rem;
-    color: #1a1a1a;
-  }
+    .site-header h1 {
+      margin: 0;
+      font-size: 1.9rem;
+      color: #1a1a1a;
+    }
 
-  .site-header p {
-    margin: 6px 0 0 0;
-    color: #555;
-    font-size: 1rem;
-  }
+    .site-header p {
+      margin: 6px 0 0 0;
+      color: #555;
+      font-size: 1rem;
+    }
 
-  .main-layout {
-    display: flex;
-    flex-direction: row;
-    gap: 32px;
-    align-items: flex-start;
-  }
-
-  /* Left Column: Feed */
-  .content-main {
-    flex: 1 1 66%;
-  }
-
-  .feed-header {
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 1.35rem;
-    color: #1a1a1a;
-    border-bottom: 2px solid #f7d6e0;
-    padding-bottom: 8px;
-  }
-
-  /* Compact Executive Recap Cards */
-  .recap-card {
-    background: #ffffff;
-    padding: 22px 26px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    border: 1px solid #f7d6e0;
-    margin-bottom: 22px;
-  }
-
-  .recap-date {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #991b3b;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .recap-text {
-    font-size: 0.96rem;
-    line-height: 1.6;
-    color: #333;
-    margin-bottom: 14px;
-  }
-
-  .recap-link {
-    display: inline-block;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: #991b3b;
-    text-decoration: none;
-  }
-
-  .recap-link:hover {
-    text-decoration: underline;
-    color: #670d24;
-  }
-
-  /* Right Column: Sidebar */
-  .sidebar-right {
-    flex: 0 0 300px;
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    border: 1px solid #f7d6e0;
-  }
-
-  .sidebar-right h3 {
-    margin-top: 0;
-    margin-bottom: 14px;
-    font-size: 1rem;
-    color: #333;
-    border-bottom: 1px solid #f0ccd7;
-    padding-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .briefing-list {
-    list-style-type: none;
-    padding-left: 0;
-    margin: 0;
-  }
-
-  .briefing-list li {
-    margin-bottom: 12px;
-    line-height: 1.35;
-    padding-bottom: 8px;
-    border-bottom: 1px dotted #f7d6e0;
-  }
-
-  .briefing-list li:last-child {
-    border-bottom: none;
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    border-radius: 4px;
-  }
-
-  .badge-minutes {
-    background-color: #d1fae5;
-    color: #065f46;
-  }
-
-  .badge-agenda {
-    background-color: #fef3c7;
-    color: #92400e;
-  }
-
-  .briefing-list a {
-    font-size: 0.82rem;
-    color: #991b3b;
-    text-decoration: none;
-    display: block;
-    margin-top: 3px;
-    word-break: break-word;
-  }
-
-  .briefing-list a:hover {
-    text-decoration: underline;
-    color: #670d24;
-  }
-
-  @media (max-width: 768px) {
     .main-layout {
-      flex-direction: column;
+      display: flex;
+      flex-direction: row;
+      gap: 32px;
+      align-items: flex-start;
     }
+
+    /* Left Column: Feed */
+    .content-main {
+      flex: 1 1 66%;
+    }
+
+    .feed-header {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.35rem;
+      color: #1a1a1a;
+      border-bottom: 2px solid #f7d6e0;
+      padding-bottom: 8px;
+    }
+
+    /* Compact Executive Recap Cards */
+    .recap-card {
+      background: #ffffff;
+      padding: 22px 26px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      border: 1px solid #f7d6e0;
+      margin-bottom: 22px;
+    }
+
+    .recap-date {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #991b3b;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .recap-text {
+      font-size: 0.96rem;
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 14px;
+    }
+
+    .recap-link {
+      display: inline-block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #991b3b;
+      text-decoration: none;
+    }
+
+    .recap-link:hover {
+      text-decoration: underline;
+      color: #670d24;
+    }
+
+    /* Right Column: Sidebar */
     .sidebar-right {
-      width: 100%;
+      flex: 0 0 300px;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      border: 1px solid #f7d6e0;
     }
-  }
-</style>
+
+    .sidebar-right h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+      font-size: 1rem;
+      color: #333;
+      border-bottom: 1px solid #f0ccd7;
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .briefing-list {
+      list-style-type: none;
+      padding-left: 0;
+      margin: 0;
+    }
+
+    .briefing-list li {
+      margin-bottom: 12px;
+      line-height: 1.35;
+      padding-bottom: 8px;
+      border-bottom: 1px dotted #f7d6e0;
+    }
+
+    .briefing-list li:last-child {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 4px;
+    }
+
+    .badge-minutes {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-agenda {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .briefing-list a {
+      font-size: 0.82rem;
+      color: #991b3b;
+      text-decoration: none;
+      display: block;
+      margin-top: 3px;
+      word-break: break-word;
+    }
+
+    .briefing-list a:hover {
+      text-decoration: underline;
+      color: #670d24;
+    }
+
+    @media (max-width: 768px) {
+      .main-layout {
+        flex-direction: column;
+      }
+      .sidebar-right {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
 
 <div class="site-wrapper">
 
@@ -193,7 +205,7 @@ title: South Milwaukee Common Council Brief
       class="city-logo"
     />
     <h1>South Milwaukee Common Council Brief</h1>
-    <p>Automated civic recaps and meeting intelligence for local residents.</p>
+    <p>Automated civic recaps and meeting intelligence for local residents. You may notice that the council posts more archives than it does minutes. Interesting...</p>
   </header>
 
   <div class="main-layout">
@@ -263,3 +275,6 @@ title: South Milwaukee Common Council Brief
   </div>
 
 </div>
+
+</body>
+</html>
