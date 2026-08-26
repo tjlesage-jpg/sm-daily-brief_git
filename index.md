@@ -67,32 +67,32 @@ title: South Milwaukee Daily Brief
   /* Compact Executive Recap Cards */
   .recap-card {
     background: #ffffff;
-    padding: 20px 24px;
+    padding: 22px 26px;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     border: 1px solid #f7d6e0;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
   }
 
   .recap-date {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: #991b3b;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .recap-text {
-    font-size: 0.95rem;
-    line-height: 1.55;
+    font-size: 0.96rem;
+    line-height: 1.6;
     color: #333;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
 
   .recap-link {
     display: inline-block;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 600;
     color: #991b3b;
     text-decoration: none;
@@ -198,7 +198,7 @@ title: South Milwaukee Daily Brief
 
   <div class="main-layout">
     
-    <!-- Left Column: Only Meeting Date, Executive Recap, and Document Link -->
+    <!-- Left Column: Explicit Executive Summary Only -->
     <main class="content-main">
       <h2 class="feed-header">Latest Approved Minutes</h2>
       
@@ -217,10 +217,12 @@ title: South Milwaukee Daily Brief
             <div class="recap-text">
               {% if item.summary %}
                 {{ item.summary }}
-              {% elsif item.content contains "### Executive Summary" %}
-                {{ item.content | split: "### Executive Summary" | last | split: "###" | first | strip_html | strip }}
+              {% elsif item.content contains "Executive Summary" %}
+                {% assign post_exec = item.content | split: "Executive Summary" | last %}
+                {% assign clean_p = post_exec | split: "<h3" | first | split: "###" | first | strip_html | strip %}
+                {{ clean_p | remove_first: "</h3>" | remove_first: ">" | strip }}
               {% else %}
-                {{ item.content | strip_html | truncatewords: 40 }}
+                {{ item.content | strip_html | truncatewords: 35 }}
               {% endif %}
             </div>
 
@@ -236,7 +238,7 @@ title: South Milwaukee Daily Brief
       {% endif %}
     </main>
 
-    <!-- Right Column: Meeting Archive with Minutes / Agenda Badges -->
+    <!-- Right Column: Meeting Archive -->
     <aside class="sidebar-right">
       <h3>Meeting Archive</h3>
       <ul class="briefing-list">
