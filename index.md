@@ -154,7 +154,7 @@ title: South Milwaukee Daily Brief
 
     <!-- Right Sidebar with smaller-font meeting links -->
     <aside class="sidebar-right">
-      <h3>Meeting Archive</h3>
+      <h3>Council Meeting Archive</h3>
       <ul class="briefing-list">
         {% assign raw_briefs = site.pages | where_exp: "item", "item.path contains 'briefings/'" %}
         {% assign sorted_briefs = raw_briefs | sort: "name" | reverse %}
