@@ -1,7 +1,5 @@
 title: South Milwaukee Daily Brief
 description: Automated municipal meeting recaps and civic briefings.
-theme: jekyll-theme-cayman
-
 collections:
   briefings:
     output: true
