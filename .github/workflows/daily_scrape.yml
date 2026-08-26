@@ -40,7 +40,8 @@ jobs:
           git add -A
           if ! git diff --staged --quiet; then
             git commit -m "Auto-update: new meeting briefings"
-            git push origin HEAD:${{ github.ref_name }}
+            git pull --rebase origin main
+            git push origin HEAD:main
           else
             echo "No new files to commit."
           fi
