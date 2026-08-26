@@ -50,7 +50,7 @@ title: South Milwaukee Daily Brief
     align-items: flex-start;
   }
 
-  /* Left Main Content Feed */
+  /* Left Column: Feed */
   .content-main {
     flex: 1 1 66%;
   }
@@ -64,82 +64,46 @@ title: South Milwaukee Daily Brief
     padding-bottom: 8px;
   }
 
-  /* Briefing Cards */
-  .brief-card {
+  /* Compact Executive Recap Cards */
+  .recap-card {
     background: #ffffff;
-    padding: 22px;
+    padding: 20px 24px;
     border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     border: 1px solid #f7d6e0;
     margin-bottom: 20px;
   }
 
-  .brief-meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 2px 7px;
-    font-size: 0.72rem;
+  .recap-date {
+    font-size: 0.9rem;
     font-weight: 700;
-    text-transform: uppercase;
-    border-radius: 4px;
-    letter-spacing: 0.4px;
-  }
-
-  .badge-minutes {
-    background-color: #d1fae5;
-    color: #065f46;
-  }
-
-  .badge-agenda {
-    background-color: #fef3c7;
-    color: #92400e;
-  }
-
-  .brief-date {
-    font-size: 0.85rem;
-    color: #666;
-    font-weight: 500;
-  }
-
-  .brief-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 1.15rem;
-  }
-
-  .brief-card h3 a {
     color: #991b3b;
-    text-decoration: none;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
-  .brief-card h3 a:hover {
-    text-decoration: underline;
-  }
-
-  .brief-summary {
+  .recap-text {
     font-size: 0.95rem;
-    line-height: 1.5;
-    color: #444;
-    margin-bottom: 14px;
+    line-height: 1.55;
+    color: #333;
+    margin-bottom: 12px;
   }
 
-  .read-more {
+  .recap-link {
+    display: inline-block;
     font-size: 0.85rem;
     font-weight: 600;
     color: #991b3b;
     text-decoration: none;
   }
 
-  .read-more:hover {
+  .recap-link:hover {
     text-decoration: underline;
+    color: #670d24;
   }
 
-  /* Right Sidebar Area */
+  /* Right Column: Sidebar */
   .sidebar-right {
     flex: 0 0 300px;
     background: #ffffff;
@@ -175,6 +139,25 @@ title: South Milwaukee Daily Brief
 
   .briefing-list li:last-child {
     border-bottom: none;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: 4px;
+  }
+
+  .badge-minutes {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .badge-agenda {
+    background-color: #fef3c7;
+    color: #92400e;
   }
 
   .briefing-list a {
@@ -215,48 +198,45 @@ title: South Milwaukee Daily Brief
 
   <div class="main-layout">
     
-    <!-- Left Column: Approved Minutes Only -->
+    <!-- Left Column: Only Meeting Date, Executive Recap, and Document Link -->
     <main class="content-main">
       <h2 class="feed-header">Latest Approved Minutes</h2>
       
       {% assign raw_briefs = site.pages | where_exp: "item", "item.path contains 'briefings/'" %}
       {% assign sorted_briefs = raw_briefs | sort: "name" | reverse %}
 
-      {% assign minutes_count = 0 %}
+      {% assign count = 0 %}
       {% for item in sorted_briefs %}
         {% if item.doc_type == "Minutes" or item.name contains "Minutes" %}
-          {% assign minutes_count = minutes_count | plus: 1 %}
-          <article class="brief-card">
-            <div class="brief-meta">
-              <span class="badge badge-minutes">Approved Minutes</span>
-              <span class="brief-date">{{ item.date | default: item.name | slice: 0, 10 }}</span>
+          {% assign count = count | plus: 1 %}
+          <div class="recap-card">
+            <div class="recap-date">
+              {{ item.date | default: item.name | slice: 0, 10 }}
             </div>
             
-            <h3>
-              <a href="{{ item.url | relative_url }}">
-                {{ item.title | default: item.name | remove: ".md" }}
-              </a>
-            </h3>
-
-            <div class="brief-summary">
+            <div class="recap-text">
               {% if item.summary %}
                 {{ item.summary }}
+              {% elsif item.content contains "### Executive Summary" %}
+                {{ item.content | split: "### Executive Summary" | last | split: "###" | first | strip_html | strip }}
               {% else %}
-                {{ item.content | strip_html | truncatewords: 35 }}
+                {{ item.content | strip_html | truncatewords: 40 }}
               {% endif %}
             </div>
 
-            <a href="{{ item.url | relative_url }}" class="read-more">Read Full Meeting Brief &rarr;</a>
-          </article>
+            <a href="{{ item.url | relative_url }}" class="recap-link">
+              View Approved Minutes & Full Brief &rarr;
+            </a>
+          </div>
         {% endif %}
       {% endfor %}
 
-      {% if minutes_count == 0 %}
+      {% if count == 0 %}
         <p style="color: #666; font-style: italic;">No approved minutes available at this time.</p>
       {% endif %}
     </main>
 
-    <!-- Right Sidebar: Full Archive with Explicit Badges -->
+    <!-- Right Column: Meeting Archive with Minutes / Agenda Badges -->
     <aside class="sidebar-right">
       <h3>Meeting Archive</h3>
       <ul class="briefing-list">
