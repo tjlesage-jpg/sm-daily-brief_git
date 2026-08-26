@@ -12,24 +12,16 @@ Automated civic updates and recaps for South Milwaukee Common Council and munici
 ## Recent Meeting Briefings
 
 <ul>
-  {% assign briefs = site.pages | where_exp: "item", "item.path contains 'briefings/'" %}
-  {% if briefs.size > 0 %}
-    {% for item in briefs reversed %}
-      <li>
-        <a href="{{ item.url | relative_url }}">
-          <strong>{{ item.title | default: item.name | remove: ".md" }}</strong>
-        </a>
-      </li>
-    {% endfor %}
-  {% else %}
-    {% for item in site.briefings reversed %}
-      <li>
-        <a href="{{ item.url | relative_url }}">
-          <strong>{{ item.title | default: item.name | remove: ".md" }}</strong>
-        </a>
-      </li>
-    {% endfor %}
-  {% endif %}
+  {% assign raw_briefs = site.pages | where_exp: "item", "item.path contains 'briefings/'" %}
+  {% assign sorted_briefs = raw_briefs | sort: "name" | reverse %}
+  
+  {% for item in sorted_briefs %}
+    <li style="margin-bottom: 0.75rem;">
+      <a href="{{ item.url | relative_url }}">
+        <strong>{{ item.title | default: item.name | remove: ".md" }}</strong>
+      </a>
+    </li>
+  {% endfor %}
 </ul>
 
 ---
