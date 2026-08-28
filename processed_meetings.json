@@ -446,5 +446,47 @@
     "iso_date": "2026-03-16",
     "doc_type": "Agenda",
     "output_file": "briefings/2026-03-16_Agenda_Agenda__03162026-1023.md"
+  },
+  "2026-09-01_Agenda_Agenda__09012026-1101": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_09012026-1101",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-09-01",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-09-01_Agenda_Agenda__09012026-1101.md"
+  },
+  "2026-03-03_Agenda_Agenda__03032026-1027": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_03032026-1027",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-03-03",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-03-03_Agenda_Agenda__03032026-1027.md"
+  },
+  "2026-03-03_Minutes_Minutes__03032026-1027": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_03032026-1027",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-03-03",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-03-03_Minutes_Minutes__03032026-1027.md"
+  },
+  "2026-02-26_Agenda_Agenda__02262026-1022": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_02262026-1022",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-02-26",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-02-26_Agenda_Agenda__02262026-1022.md"
+  },
+  "2026-02-18_Agenda_Agenda__02182026-1020": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_02182026-1020",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-02-18",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-02-18_Agenda_Agenda__02182026-1020.md"
+  },
+  "2026-02-18_Minutes_Minutes__02182026-1020": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_02182026-1020",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-02-18",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-02-18_Minutes_Minutes__02182026-1020.md"
   }
 }
