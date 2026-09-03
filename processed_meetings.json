@@ -537,5 +537,19 @@
     "iso_date": "2026-01-06",
     "doc_type": "Minutes",
     "output_file": "briefings/2026-01-06_Minutes_Minutes__01062026-1003.md"
+  },
+  "2026-08-06_Minutes_Minutes__08062026-1091": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_08062026-1091",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-08-06",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-08-06_Minutes_Minutes__08062026-1091.md"
+  },
+  "2026-08-04_Minutes_Minutes__08042026-1090": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_08042026-1090",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-08-04",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-08-04_Minutes_Minutes__08042026-1090.md"
   }
 }
