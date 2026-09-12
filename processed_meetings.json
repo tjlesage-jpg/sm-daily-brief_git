@@ -551,5 +551,19 @@
     "iso_date": "2026-08-04",
     "doc_type": "Minutes",
     "output_file": "briefings/2026-08-04_Minutes_Minutes__08042026-1090.md"
+  },
+  "2026-09-15_Agenda_Agenda__09152026-1106": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_09152026-1106",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-09-15",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-09-15_Agenda_Agenda__09152026-1106.md"
+  },
+  "2026-09-15_Agenda_Agenda__09152026-1107": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_09152026-1107",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-09-15",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-09-15_Agenda_Agenda__09152026-1107.md"
   }
 }
