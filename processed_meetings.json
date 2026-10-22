@@ -600,5 +600,12 @@
     "iso_date": "2026-10-20",
     "doc_type": "Agenda",
     "output_file": "briefings/2026-10-20_Agenda_Agenda__10202026-1124.md"
+  },
+  "2026-10-06_Minutes_Minutes__10062026-1116": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Minutes/_10062026-1116",
+    "title": "Common Council Minutes - ",
+    "iso_date": "2026-10-06",
+    "doc_type": "Minutes",
+    "output_file": "briefings/2026-10-06_Minutes_Minutes__10062026-1116.md"
   }
 }
