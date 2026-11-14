@@ -614,5 +614,12 @@
     "iso_date": "2026-11-09",
     "doc_type": "Agenda",
     "output_file": "briefings/2026-11-09_Agenda_Agenda__11092026-1132.md"
+  },
+  "2026-11-17_Agenda_Agenda__11172026-1138": {
+    "url": "https://www.southmilwaukee.gov/AgendaCenter/ViewFile/Agenda/_11172026-1138",
+    "title": "Common Council Agenda - Agenda",
+    "iso_date": "2026-11-17",
+    "doc_type": "Agenda",
+    "output_file": "briefings/2026-11-17_Agenda_Agenda__11172026-1138.md"
   }
 }
